@@ -1,0 +1,33 @@
+ <div class="row">
+    <div class="col-sm">
+      <p class="turn-text">
+        <strong *ngIf="botTurn">Computer's turn</strong>
+        <strong *ngIf="!botTurn">Your turn</strong>
+      </p>
+    </div>
+    <div class="col-sm">
+      <p class="notification float-right">
+        <strong>{{this.notification}}</strong>
+      </p>
+    </div>
+</div>
+<div class="row board">
+  <table class="table table-responsive table-bordered table-dark board-table">
+    <tbody>
+    <tr *ngFor="let row of rows;">
+      <td class="board-cell"
+          *ngFor="let col of columns;"
+          (click)="onCellSelect(row, col)">
+        <div class="cell-mark tic-tac align-middle" >
+          {{getText(row,col)}}
+        </div>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class="row">
+    <button type="button" class="btn btn-warning btn-sm" (click)="resetBoard()">Reset</button>
+</div>
+
+
