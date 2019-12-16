@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import {max} from "rxjs/operators";
 
 @Component({
   selector: 'app-solo-board',
@@ -12,6 +11,7 @@ export class SoloBoardComponent implements OnInit {
   botTurn = false;
   notification: string = null;
   gameOver: boolean;
+
   board = new Array(2);
   player = new Array(2);
   bot = new Array(2);
@@ -58,29 +58,35 @@ export class SoloBoardComponent implements OnInit {
       this.notify('Cell not Available !');
       return;
     }
-    const cell = this.getCell(row, col);
-    cell.available = false;
-    cell.player = 2;
+    // Player's move
+    this.board[row][col].available = false;
+    this.board[row][col].available = false;
+    this.board[row][col].player = 2;
     this.player[row][col] = true;
+
     this.checkWinCondition(2);
-    if (this.gameOver) {return; }
-    this.botTurn = true;
-    setTimeout(() => { this.botMove(); }, 1000);
+    if (this.gameOver) {
+      return;
+    } else {
+      // Bot's move
+      this.botTurn = true;
+      this.botMove();
+    }
   }
 
-  getAvailableBoard(board) {
-    const moves = [];
-    this.rows.forEach(row => {
-      this.columns.forEach(col => {
-        if (board[row][col].available === true) {
-          moves.push([row, col]);
-        }
-      });
-    });
-    return moves;
+  botMove() {
+    // find best move by applying Min-Max algorithm
+    const bestMove = this.findBestMove(this.board.slice());
+
+    this.bot[bestMove.row][bestMove.col] = true;
+    this.board[bestMove.row][bestMove.col].available = false;
+    this.board[bestMove.row][bestMove.col].player = 1;
+
+    this.checkWinCondition(1);
+    this.botTurn = false;
   }
 
-  // evaluation function
+  // Evaluation function
   evaluate(board) {
     // Checking for Rows
     for ( let row = 0; row < 3; row++) {
@@ -124,7 +130,9 @@ export class SoloBoardComponent implements OnInit {
     return 0;
   }
 
+  // Min-Max Function
   minMax(board, depth, isMaximizingPlayer) {
+
     const score = this.evaluate(board);
     // If Maximizer has won the game return its evaluated score
     if (score === 10) {
@@ -134,10 +142,10 @@ export class SoloBoardComponent implements OnInit {
     if (score === -10) {
       return score;
     }
-
+    this.printBoard(board);
     // If there are no more moves and no winner then it is a draw
-    if (!this.isMovesLeft(board)) {
-       return 0;
+    if (this.isMovesLeft(board.slice()) === false) {
+      return 0;
     }
 
     // if not continue
@@ -149,13 +157,13 @@ export class SoloBoardComponent implements OnInit {
       for (let row = 0; row < 3; row++) {
         for (let col = 0; col < 3; col++) {
           // if cell is empty
-          if (board[row][col].available !== true) {
+          if (board[row][col].available === true) {
             // Make the move
             board[row][col].available = false;
             board[row][col].player = 1;
 
             // Call miniMax recursively and choose the maximum value
-            best = Math.max(best, this.minMax(board, depth + 1, !isMaximizingPlayer));
+            best = Math.max(best, this.minMax(board.slice(), depth + 1, !isMaximizingPlayer));
 
             // Undo the move
             board[row][col].available = true;
@@ -171,13 +179,13 @@ export class SoloBoardComponent implements OnInit {
       for (let row = 0; row < 3; row++) {
         for (let col = 0; col < 3; col++) {
           // if cell is empty
-          if (board[row][col].available !== true) {
+          if (board[row][col].available === true) {
             // Make the move
             board[row][col].available = false;
             board[row][col].player = 2;
 
             // Call miniMax recursively and choose the maximum value
-            best = Math.min(this.minMax(board, depth + 1, isMaximizingPlayer));
+            best = Math.min(best, this.minMax(board.slice(), depth + 1, !isMaximizingPlayer));
 
             // Undo the move
             board[row][col].available = true;
@@ -201,7 +209,7 @@ export class SoloBoardComponent implements OnInit {
           board[row][col].available = false;
           board[row][col].player = 1;
           // compute evaluation function for this move.
-          const moveValue = this.minMax(board, 0, false);
+          const moveValue = this.minMax(board.slice(), 0, false);
           // undo the move
           board[row][col].available = true;
           board[row][col].player = null;
@@ -218,45 +226,21 @@ export class SoloBoardComponent implements OnInit {
     return bestMove;
   }
 
-  botMove() {
-    // find best move by applying Min-Max algorithm
-    const bestMove = this.findBestMove(this.board);
-    this.bot[bestMove.row][bestMove.col] = true;
-    this.board[bestMove.row][bestMove.col].available = false;
-    this.board[bestMove.row][bestMove.col].player = 1;
-
-    this.checkWinCondition(1);
-    this.botTurn = false;
-  }
-
   isMovesLeft(board) {
-    let count = 0;
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 3; col++) {
         if (board[row][col].available === true) {
-          count++;
+          return true;
         }
       }
     }
-    return count !== 0;
-  }
-
-  countSelected(playerCells) {
-    let count = 0;
-    this.rows.forEach(row => {
-      this.columns.forEach(col => {
-        if (playerCells[row][col] === true) {
-          count++;
-        }
-      });
-    });
-    return count;
+    return false;
   }
 
   checkWinCondition(player: number) {
     let currentPlayer = null;
     let msg = null;
-    if (this.botTurn) {
+    if (player === 1) {
       msg = 'Computer won !';
       currentPlayer = this.bot;
     } else {
@@ -285,15 +269,23 @@ export class SoloBoardComponent implements OnInit {
       return;
     }
     // check draw condition
-    if ( this.isMovesLeft(this.board)) {
+    if ( !this.isMovesLeft(this.board)) {
       this.notify('Game Draw !');
       this.gameOver = true;
     }
 
   }
 
-  getCell(row, col) {
-    return this.board[row][col];
+  countSelected(playerCells) {
+    let count = 0;
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        if (playerCells[row][col] === true) {
+          count++;
+        }
+      }
+    }
+    return count;
   }
 
   isAvailable(row, col) {
@@ -301,11 +293,10 @@ export class SoloBoardComponent implements OnInit {
   }
 
   getText(row, col) {
-    const cell = this.getCell(row, col);
-    if (cell.available === true) {
+    if (this.board[row][col].available === true) {
       return '';
     }
-    if ( cell.player === 1) {
+    if ( this.board[row][col].player === 1) {
       return 'X';
     } else {
       return 'O';
@@ -316,5 +307,22 @@ export class SoloBoardComponent implements OnInit {
     this.notification = null;
     this.gameOver = false;
     this.ngOnInit();
+  }
+
+  // function used to visualize board while debugging.
+  printBoard(board) {
+    let str = '';
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        if (board[row][col].player === 1 ) {
+          str += 'x';
+        } else if (board[row][col].player === 2) {
+          str += 'o';
+        } else {
+          str += '_';
+        }
+      }
+      str += '\n';
+    }
   }
 }
